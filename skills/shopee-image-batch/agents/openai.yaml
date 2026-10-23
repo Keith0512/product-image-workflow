@@ -1,0 +1,4 @@
+interface:
+  display_name: "蝦皮商品圖片批次處理"
+  short_description: "商品圖片接縫還原、台灣繁中化、S與M輸出及完整品質稽核"
+  default_prompt: "請使用 $shopee-image-batch 處理我授權的商品資料夾，保留原圖並交付五套圖片與離線HTML報告。"

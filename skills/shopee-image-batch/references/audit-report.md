@@ -1,0 +1,68 @@
+# 品質、追溯與離線報告
+
+## 狀態
+
+- PASS：全部適用必要條件實測通過，無未解內容／視覺疑點。
+- REVIEW：完整可用成果仍有來源缺漏疑慮、接縫、繁中、可讀性、容量或張數衝突。
+- FAIL：必要來源缺失／損壞、必要階段未完成、必要輸出未產生。
+- N/A：僅使用者確認類別不適用，記確認依據，不掩蓋未完成。
+
+商品／模式／整批取最嚴重適用狀態。機器稽核與視覺驗證分欄；沒檢視不能空白當通過。
+
+## 驗證
+
+1. 檔案實際解碼、RGB、尺寸、bytes、命名、順序、來源SHA-256及映射。
+2. 每個還原接縫商品／文字連續，無重複線、白黑線、背景色差、遺失、誤刪重疊和缺口。
+3. OCR有視覺或人工校正，台灣繁中／術語正確，數值／型號／單位相符，無簡體宣傳殘影、文字重疊和新增不透明蓋字，跨接縫文句完整。
+4. 商品外觀／比例／顏色／結構／配件／LOGO一致，無虛構零件或修縫局部重畫。
+5. S自然切割、來源完整覆蓋及內容保留。
+6. M唯一來源、固定Y區間、預期／實際片數、無損重組及JPEG視覺一致；超限仍交全稿。
+
+## 資料夾
+
+每商品獨立新版本，日期採使用者時區、同名遞增，不覆寫：
+- 0_處理紀錄/原始接縫分析、接縫前後對照、原始還原作業資料、背景修復、OCR及文字紀錄、本次M中間來源、歷史M版本。
+- 1_主圖、2_選項圖、3_詳情頁、4_S詳情頁、5_M詳情頁。
+- 6_待人工審核/接縫異常、文字異常、圖片異常、超限完整稿。
+- M版來源：只有使用者自行準備時存在，不自動建立。
+- 預覽總覽.jpg、處理報告.html、文字轉換對照.csv、圖片來源對應.csv。
+
+整批總報告以相對路徑連各商品。僅M模式註明其他模式未執行。
+
+## 紀錄契約
+
+JSON及CSV用UTF-8；CSV建議BOM方便試算表。機器座標半開區間、左上原點，標座標空間及寬高。多來源／重排映射拆多列，不以一個檔名冒充追溯。
+
+來源清單：
+source_id, product, category, sku, relative_path, width, height, bytes, sha256, natural_order, decode_status
+
+文字轉換對照.csv：
+text_id, product, source_ids, source_boxes, original_text, zh_tw_text, confidence, correction_evidence, protected_values, repair_method, image_edit_call_id, final_boxes, status, reason
+
+圖片來源對應.csv：
+output_path, output_sha256, source_id, source_sha256, source_box, normalized_box, output_box, scale_x, scale_y, overlap_removed_px, change_type, evidence_path, status
+
+change_type區分原始保留／去重／去字／補景／文字重排／裁切／縮放。AI與新排文字屬衍生像素，記原區域和操作，不謊稱原始像素。無法得知原文／信心／審核者時不捏造。
+
+接縫：
+upper_source, lower_source, type, evidence, cuts_product, cuts_text, merged, overlap_px, normalized_overlap_px, restored_y, source_transforms, before_preview, after_preview, status, reason
+
+每一邊界一列，切商品／文字用是／否／不確定；重疊高度區分來源與規格化座標。
+
+模型每次實際呼叫記工具／可得模型、時間、call_id、輸入來源、遮罩座標、採用區域及驗證；重試也計次。沒用明記0，不捏造模型版本。
+
+## HTML
+
+UTF-8、lang=zh-Hant、viewport、內嵌CSS、手機／電腦可讀、無CDN／遠端字型／網路。圖片與連結用有效相對路徑，所有檔名／OCR／文案做HTML escape，不成可執行JS。實際本機開啟測連結和圖片。
+
+必含：
+- 日期、商品／批次狀態、模式、完成與缺失階段。
+- 來源數量／路徑／雜湊／分類，原圖成品對照，各張尺寸／實際bytes／順序／檢查。
+- 文字對照、補景方式、實體簡體保留揭露、模型實際次數／區域、商品SKU一致性。
+- 獨立章節「原始詳情頁切割與還原分析」：原圖數、參與連續接圖來源圖數（去重計）、獨立設計圖數、異常邊界數、成功還原數、重疊去重數、未確認／無法還原數。圖數與邊界數分清。
+- 每個異常接縫上／下圖、類型、是否切商品／文字、是否還原、實際重疊px、狀態／方式、前後圖、合併座標、新切線與原因。
+- S合併來源、切線與結果。
+- M來源模式、實際清單、與3版選圖差異；來源規格化前後總高、去重／移除留白量、長圖總高、新增留白量（固定模式必須0）、每片Y、預期／實際片數、超限數／原因。無3版可比記N/A，不假設相同。
+- 全部REVIEW／FAIL明細、影響、對應檔與後續建議，不隱藏失敗商品。
+
+超限完整稿放6_待人工審核/超限完整稿，不能丟棄多出的圖片或稱全部符合上架規格。工具產生的JSON／切片紀錄不能取代這份完整HTML。
