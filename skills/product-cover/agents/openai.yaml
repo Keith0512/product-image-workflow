@@ -1,4 +1,4 @@
 interface:
-  display_name: "商品封面圖製作"
+  display_name: "商品封面"
   short_description: "先讀取主圖、詳情頁與選項圖，再提問釐清賣點，製作繁體中文電商封面"
   default_prompt: "請使用 $product-cover，先讀取我提供的商品素材目錄，整理可用圖片與規格，再問我關鍵問題，製作商品封面圖。"

@@ -15,7 +15,7 @@ OUTPUTS = {
     "4_S詳情頁": ("S詳情", 12, 2000000),
     "5_M詳情頁": ("M詳情", 20, 500000),
 }
-EXCLUDED = set(OUTPUTS) | {"0_處理紀錄", "6_待人工審核", "M版來源"}
+EXCLUDED = set(OUTPUTS) | {"輸出", "0_處理紀錄", "6_待人工審核", "M版來源"}
 ALIASES = {
     "主圖": "main", "主图": "main", "main": "main",
     "選項圖": "option", "选项图": "option", "sku": "option",
@@ -116,7 +116,8 @@ def resolve_m(result_root, explicit=None):
     if not paths:
         raise ValueError("選定M來源沒有有效圖片；不得回退")
     nested = [p for p in source.rglob("*") if p.is_file()
-              and p.parent != source and p.suffix.lower() in EXTENSIONS]
+              and p.parent != source and p.suffix.lower() in EXTENSIONS
+              and p.relative_to(source).parts[0] != "輸出"]
     if nested:
         raise ValueError("M來源含子目錄圖片，須先確認歸屬與順序")
     images = []

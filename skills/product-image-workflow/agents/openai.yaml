@@ -1,4 +1,4 @@
 interface:
-  display_name: "商品圖片整套製作"
+  display_name: "整套商品圖"
   short_description: "一個入口整理商品素材、製作封面與詳情頁，先提問選稿再交付圖片與報告"
   default_prompt: "請使用 $product-image-workflow，從我提供的商品素材目錄開始，先盤點並提問，再製作封面與整套商品圖片。"

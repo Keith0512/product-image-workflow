@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600" role="img" aria-labelledby="title desc">
-<title id="title">準備好資料夾，複製位置即可</title><desc id="desc">來源包含主圖、詳情圖、規格圖、選項圖；成果放在不同目錄，保留原圖與歷史版本。</desc>
+<title id="title">準備好資料夾，複製位置即可</title><desc id="desc">來源包含主圖、詳情圖、規格圖、選項圖；在來源下新增輸出資料夾，集中保存所有成果與紀錄，保留原圖與歷史版本。</desc>
 <style>text{font-family:"Microsoft JhengHei","PingFang TC",sans-serif;fill:#22362e}.small{font-size:19px;fill:#52665c}.heading{font-size:29px;font-weight:700}.label{font-size:24px;font-weight:700}.mono{font-family:Consolas,monospace;font-size:21px}</style>
 <rect width="1000" height="600" rx="24" fill="#f3f3e9"/>
 <text x="40" y="56" class="heading">準備好資料夾，複製位置即可</text>
@@ -11,7 +11,7 @@
 <path d="M83 244 V451 M83 270 H108 M83 322 H108 M83 374 H108 M83 426 H108" fill="none" stroke="#aabcae" stroke-width="3"/>
 <text x="120" y="279" class="label">主圖</text><text x="120" y="331" class="label">詳情圖</text><text x="120" y="383" class="label">規格圖</text><text x="120" y="435" class="label">選項圖</text>
 <text x="65" y="490" class="small">名稱可不同；沒有的類別直接說明。</text>
-<text x="550" y="169" class="label">成果：AI 另存</text><text x="550" y="208" class="mono">D:\商品成果\商品A-v01</text>
+<text x="550" y="169" class="label">成果：自動存入「輸出」</text><text x="550" y="208" class="mono" style="font-size:18px">D:\商品素材\商品A\輸出\</text><text x="550" y="235" class="mono" style="font-size:18px">YYYYMMDD-v01\</text>
 <text x="550" y="265" class="small">1_主圖　→ 封面排第一張</text><text x="550" y="305" class="small">2_選項圖</text><text x="550" y="345" class="small">3_詳情頁、4_S、5_M</text><text x="550" y="385" class="small">0_處理紀錄、6_待人工審核</text><text x="550" y="435" class="label">處理報告.html</text>
 <text x="550" y="490" class="small">只做封面時，不強制產生整套資料夾。</text>
-<text x="40" y="568" class="small">來源與成果分開放；改版使用 v02、v03，保留前一版。</text></svg>
+<text x="40" y="568" class="small">成果集中在來源下的「輸出」；改版使用 v02、v03，保留前一版。</text></svg>

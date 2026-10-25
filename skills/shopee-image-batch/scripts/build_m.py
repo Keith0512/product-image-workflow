@@ -77,8 +77,11 @@ def build(plan_path, output):
                 raise ValueError("只允許有證據的OVERLAP去重")
     output = Path(output).resolve()
     source = Path(selected["source_root"])
-    if output == source or output.is_relative_to(source) or source.is_relative_to(output):
-        raise ValueError("輸出與來源不得互相包含")
+    if output == source or source.is_relative_to(output):
+        raise ValueError("輸出不得等同來源或包含來源")
+    if output.is_relative_to(source) and (output == source / "輸出"
+                                         or not output.is_relative_to(source / "輸出")):
+        raise ValueError("來源內輸出僅允許放在「輸出」下的新版本目錄")
     # New root is mandatory: no overwrite or partial reuse.
     output.mkdir(parents=True, exist_ok=False)
     records = output / "0_處理紀錄"
