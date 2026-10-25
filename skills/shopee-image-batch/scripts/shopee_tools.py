@@ -15,7 +15,9 @@ OUTPUTS = {
     "4_S詳情頁": ("S詳情", 12, 2000000),
     "5_M詳情頁": ("M詳情", 20, 500000),
 }
-EXCLUDED = set(OUTPUTS) | {"輸出", "0_處理紀錄", "6_待人工審核", "M版來源"}
+WATERMARK_OUTPUT = "7_浮水印主圖"
+EXCLUDED = set(OUTPUTS) | {"輸出", "0_處理紀錄", "6_待人工審核", "M版來源",
+                           "浮水印", "浮水印素材", WATERMARK_OUTPUT}
 ALIASES = {
     "主圖": "main", "主图": "main", "main": "main",
     "選項圖": "option", "选项图": "option", "sku": "option",
@@ -134,22 +136,45 @@ def resolve_m(result_root, explicit=None):
             "pending": ["逐接縫、文字、商品及SKU檢視"]}
 
 
-def audit(root, mode="full", na=(), sku_count=None):
+def audit(root, mode="full", na=(), sku_count=None, watermark_sets=(),
+          watermark_cover_only=False):
     root = Path(root).resolve(strict=True)
     rows, issues = [], []
-    names = ["5_M詳情頁"] if mode == "m" else list(OUTPUTS)
-    for name in names:
-        if name in na:
+    names = ["5_M詳情頁"] if mode == "m" else ["1_主圖"] if mode == "main" else list(OUTPUTS)
+    targets = [(name, name) for name in names]
+    main_files = set()
+    if mode != "m":
+        main_root = root / "1_主圖"
+        if main_root.is_dir():
+            main_files = {p.name for p in main_root.iterdir()
+                          if p.is_file() and p.suffix.lower() in EXTENSIONS
+                          and (not watermark_cover_only or p.stem == "主圖_01")}
+        watermark_root = root / WATERMARK_OUTPUT
+        sets = set(watermark_sets)
+        if watermark_root.is_dir():
+            sets.update(p.name for p in watermark_root.iterdir() if p.is_dir())
+        for label in sorted(sets, key=natural_key):
+            if not label or label in {".", ".."} or re.search(r'[<>:"/\\|?*]', label):
+                raise ValueError("浮水印套別名稱必須是單一有效資料夾名稱")
+            targets.append((f"{WATERMARK_OUTPUT}/{label}", "1_主圖"))
+    for relative, name in targets:
+        if relative == name and name in na:
             issues.append({"status": "REVIEW", "reason": f"{name}標N/A，需確認使用者依據"})
             continue
-        directory = root / name
+        directory = root / relative
         files = sorted([p for p in directory.iterdir() if p.is_file()
                         and p.suffix.lower() in EXTENSIONS], key=lambda p: natural_key(p.name)) if directory.is_dir() else []
         prefix, limit, cap = OUTPUTS[name]
         if not files:
-            issues.append({"status": "FAIL", "reason": f"{name}必要輸出缺失"})
+            issues.append({"status": "FAIL", "reason": f"{relative}必要輸出缺失"})
         if limit and len(files) > limit:
-            issues.append({"status": "REVIEW", "reason": f"{name}超限：{len(files)}>{limit}"})
+            issues.append({"status": "REVIEW", "reason": f"{relative}超限：{len(files)}>{limit}"})
+        if relative != name:
+            actual = {p.name for p in files}
+            if main_files - actual:
+                issues.append({"status": "FAIL", "reason": f"{relative}缺少對應主圖：{sorted(main_files - actual)}"})
+            if actual - main_files:
+                issues.append({"status": "REVIEW", "reason": f"{relative}含未對應主圖：{sorted(actual - main_files)}"})
         if name == "2_選項圖":
             if sku_count is None:
                 issues.append({"status": "REVIEW", "reason": "尚未核對有效SKU數量"})
@@ -184,7 +209,7 @@ def audit(root, mode="full", na=(), sku_count=None):
             except Exception as e:
                 row.update(status="FAIL", issues=[str(e)])
             rows.append(row)
-    for filename in (["處理報告.html", "圖片來源對應.csv"] if mode == "m" else
+    for filename in ([] if mode == "main" else ["處理報告.html", "圖片來源對應.csv"] if mode == "m" else
                      ["處理報告.html", "圖片來源對應.csv", "文字轉換對照.csv", "預覽總覽.jpg"]):
         if not (root / filename).is_file():
             issues.append({"status": "FAIL", "reason": f"必要交付缺失：{filename}"})
@@ -207,9 +232,11 @@ def main():
     p.add_argument("--out")
     p = sub.add_parser("audit")
     p.add_argument("root")
-    p.add_argument("--mode", choices=["full", "m"], default="full")
+    p.add_argument("--mode", choices=["full", "m", "main"], default="full")
     p.add_argument("--na", action="append", choices=list(OUTPUTS), default=[])
     p.add_argument("--sku-count", type=int)
+    p.add_argument("--watermark-set", action="append", default=[])
+    p.add_argument("--watermark-cover-only", action="store_true")
     p.add_argument("--out")
     args = parser.parse_args()
     try:
@@ -218,7 +245,8 @@ def main():
         elif args.command == "resolve-m":
             result = resolve_m(args.root, args.source)
         else:
-            result = audit(args.root, args.mode, args.na, args.sku_count)
+            result = audit(args.root, args.mode, args.na, args.sku_count,
+                           args.watermark_set, args.watermark_cover_only)
         if args.out:
             save_json_new(args.out, result)
         print(json.dumps(result, ensure_ascii=False, indent=2))
