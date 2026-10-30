@@ -7,7 +7,7 @@ import json
 import math
 from pathlib import Path
 from PIL import Image, ImageOps, ImageCms
-from shopee_tools import resolve_m, save_json_new, sha256
+from shopee_tools import resolve_m, save_json_new, sha256, validate_visual_reviews
 
 SEAM_TYPES = {"CONTINUOUS", "OVERLAP", "INDEPENDENT", "MISSING", "UNCERTAIN"}
 
@@ -75,6 +75,8 @@ def build(plan_path, output):
                 raise ValueError("每一接縫均須分類與證據")
             if trim and boundary["type"] != "OVERLAP":
                 raise ValueError("只允許有證據的OVERLAP去重")
+    # Block before any output is created; old source_reviewed alone is insufficient.
+    visual_reviews = validate_visual_reviews(rows)
     output = Path(output).resolve()
     source = Path(selected["source_root"])
     if output == source or source.is_relative_to(output):
@@ -165,6 +167,7 @@ def build(plan_path, output):
         "actual_count": len(slices), "added_whitespace_px": 0,
         "removed_overlap_px": sum(s["trim_top_normalized_px"] for s in sources),
         "sources": sources, "slices": slices,
+        "pre_slice_visual_reviews": visual_reviews,
         "visual_status": "NOT_VERIFIED",
         "pending": pending + ["壓縮後視覺、切線字元、繁中、SKU、來源覆蓋及完整HTML待驗證"],
         "logical_long_image": "依sources工作圖與座標可完整重建；本工具不配置巨型單張點陣圖",

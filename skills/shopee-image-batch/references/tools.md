@@ -13,6 +13,7 @@
 - scan：遞迴掃描支援格式、自然排序、解碼、SHA-256、原始尺寸／EXIF方向／ICC。排除來源內所有「輸出」子樹、既定成果資料夾、「浮水印」「浮水印素材」「7_浮水印主圖」及有處理報告的輸出樹。使用多個「--exclude 絕對路徑」補入散放的指定浮水印及無法自動判斷的歷史成果；不要聲稱程式可推斷全部歷史版本。
 - 分類只由路徑別名給候選；sku留空，商品與SKU需視覺核對。mode、width、height為來源實際儲存值，方向未套用時不代表顯示尺寸。
 - resolve-m：依正式來源優先規則選唯一資料夾，直接檔案自然排序，檢查所有檔案；排除來源直屬「輸出」子樹，空／部分損壞／其他來源子目錄圖片都停止，不默默回退。結果仍REVIEW等待視覺。
+- check-visual：在S／M開始前核對 [逐張視覺驗收紀錄](pre-slice-review.md)。用 `check-visual 驗收.json --source 本次主圖 --source 本次選項圖 --source 本次3版`，只列實際適用資料夾；僅M使用選定的唯一來源。sources必須與這些資料夾直屬有效圖片完整對應，不可漏圖、重複或混入別圖。逐張必須有四項PASS、非空實際證據，來源sha256與visual_review.sha256均須等於目前檔案；缺項、未通過或改圖後沿用舊紀錄則exit2。成功只代表紀錄有效，回傳仍為REVIEW、visual_status為NOT_VERIFIED_BY_TOOL，不代表程式已看懂圖片品質。
 - audit：檢查輸出解碼、RGB、尺寸、容量、命名／序號／數量、必要交付存在；「--mode m」限M，「--mode main」限主圖與浮水印套別、供僅封面使用，不要求其他四套及完整報告。「--sku-count N」核對有效SKU數，「--na 資料夾名」需有使用者N/A依據。
 - 浮水印稽核：full／main 會自動納入 `7_浮水印主圖` 的直屬套別，逐套套用主圖規格與無浮水印檔名對應。每個約定套別都加「--watermark-set 套名」才能檢出整套缺失；只套封面另加「--watermark-cover-only」。缺圖 FAIL，多出未對應圖或規格衝突 REVIEW；不驗證實際浮水印內容、透明度、遮擋、核定紀錄或來源映射，仍須視覺與報告核對。
 - FILE_OK只是單張機械規格通過；整體不回PASS。稽核不驗證HTML內容、追溯映射、來源完整性或語意切線。
@@ -20,7 +21,7 @@
 
 ## build_m.py計畫
 
-先用resolve-m得到正式來源清單，實際檢視每個相鄰接縫，將證據寫入計畫。此計畫是AI工作成果，不能用範例的檢視聲明當成已完成。所有路徑需為本機絕對路徑。source_reviewed只有真正檢視才設true。
+先用resolve-m得到正式來源清單，實際檢視每個相鄰接縫，再依分割前視覺驗收逐張檢查字體排版、舊字殘影、背景陰影及商品保真，將證據寫入計畫。此計畫是AI工作成果，不能用範例的檢視聲明當成已完成。所有路徑需為本機絕對路徑。source_reviewed只有真正檢視才設true，不能代替逐張visual_review。
 
 計畫格式：
 ```json
@@ -30,14 +31,22 @@
   "source_reviewed": true,
   "review_evidence": "實際檢視紀錄或對照圖路徑與結論",
   "sources": [
-    {"path": "第一張正式來源絕對路徑", "sha256": "實際SHA256", "trim_top_normalized_px": 0},
-    {"path": "第二張正式來源絕對路徑", "sha256": "實際SHA256", "trim_top_normalized_px": 0,
-      "boundary_before": {"type": "INDEPENDENT", "evidence": "實際接縫觀察依據"}}
+    {
+      "path": "第一張正式來源絕對路徑", "sha256": "實際SHA256", "trim_top_normalized_px": 0,
+      "visual_review": {
+        "sha256": "實際檢視當下該圖的SHA256", "status": "PASS",
+        "typography": "PASS", "text_cleanup": "PASS",
+        "background": "PASS", "product_integrity": "PASS",
+        "evidence": "實際整圖及100%局部檢視的發現、對照預覽位置與複檢結果"
+      }
+    }
   ]
 }
 ```
 
 可選explicit_source覆蓋來源選擇；透明來源需確認background_rgb，例如[255,255,255]。不能未檢視便填白底。sources必須和resolve-m清單、排序及雜湊完全相同；每一非首張均填boundary_before五類之一及證據。
+
+每張來源都須有上述visual_review。build_m在建立輸出目錄前驗證逐張四項PASS、實際證據與已驗收雜湊，舊計畫只有source_reviewed會被拒絕，必須先補做實際驗收，不能自動填PASS。通過的紀錄保存於M計畫及M切片紀錄的pre_slice_visual_reviews；這是輸入驗收證據，切片後visual_status仍待驗證。
 
 trim_top_normalized_px是套EXIF方向、保比例調為1000寬後的頂端去重高度，僅OVERLAP可非零，不得刪整張。必要接縫修復超過確認頂端去重能力時，由代理先建立可追溯中間副本並另行完成，不可擅改來源。腳本不自動猜重疊，也不調文字切線／留白／排版。
 

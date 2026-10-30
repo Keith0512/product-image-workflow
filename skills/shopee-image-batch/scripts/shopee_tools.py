@@ -55,6 +55,47 @@ def save_json_new(path, value):
         json.dump(value, f, ensure_ascii=False, indent=2)
 
 
+def validate_visual_reviews(rows, source_dirs=()):
+    """Validate recorded visual PASS and file identity, never infer image quality."""
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("分割前須提供逐張視覺驗收紀錄")
+    checked, paths = [], set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("逐張視覺驗收紀錄格式不符")
+        path = Path(row.get("path", ""))
+        if not path.is_absolute() or not path.is_file():
+            raise ValueError("視覺驗收來源須為存在的絕對檔案路徑")
+        path = path.resolve()
+        if path in paths:
+            raise ValueError("視覺驗收清單不可重複圖片")
+        paths.add(path)
+        actual_hash = sha256(path)
+        review = row.get("visual_review")
+        if not isinstance(review, dict) or review.get("status") != "PASS":
+            raise ValueError(f"分割前視覺驗收未通過：{path.name}")
+        if row.get("sha256") != actual_hash or review.get("sha256") != actual_hash:
+            raise ValueError(f"圖片版本已變更，須重新視覺驗收：{path.name}")
+        for check in ("typography", "text_cleanup", "background", "product_integrity"):
+            if review.get(check) != "PASS":
+                raise ValueError(f"分割前視覺檢查未通過：{path.name}／{check}")
+        evidence = review.get("evidence")
+        if not isinstance(evidence, str) or not evidence.strip():
+            raise ValueError(f"缺少實際逐張視覺檢查證據：{path.name}")
+        checked.append({"path": str(path), "sha256": actual_hash, "visual_review": review})
+    if source_dirs:
+        expected = set()
+        for source_dir in source_dirs:
+            directory = Path(source_dir).resolve(strict=True)
+            if not directory.is_dir():
+                raise ValueError("視覺驗收範圍須為圖片資料夾")
+            expected.update(p.resolve() for p in directory.iterdir()
+                            if p.is_file() and p.suffix.lower() in EXTENSIONS)
+        if paths != expected:
+            raise ValueError("視覺驗收清單未完整對應指定資料夾，不能漏檢或混入其他圖片")
+    return checked
+
+
 def inventory(root, excludes=()):
     root = Path(root).resolve(strict=True)
     if not root.is_dir():
@@ -230,6 +271,10 @@ def main():
     p.add_argument("root")
     p.add_argument("--source")
     p.add_argument("--out")
+    p = sub.add_parser("check-visual", help="驗證分割前逐張視覺驗收紀錄與圖片版本")
+    p.add_argument("plan")
+    p.add_argument("--source", action="append", required=True)
+    p.add_argument("--out")
     p = sub.add_parser("audit")
     p.add_argument("root")
     p.add_argument("--mode", choices=["full", "m", "main"], default="full")
@@ -244,6 +289,12 @@ def main():
             result = inventory(args.root, args.exclude)
         elif args.command == "resolve-m":
             result = resolve_m(args.root, args.source)
+        elif args.command == "check-visual":
+            plan = json.loads(Path(args.plan).read_text(encoding="utf-8-sig"))
+            checked = validate_visual_reviews(plan.get("sources"), args.source)
+            result = {"status": "REVIEW", "review_records": "VALID", "images": checked,
+                      "visual_status": "NOT_VERIFIED_BY_TOOL",
+                      "note": "僅核對逐張PASS紀錄、範圍與雜湊；實際視覺驗收由檢視圖片的代理負責。"}
         else:
             result = audit(args.root, args.mode, args.na, args.sku_count,
                            args.watermark_set, args.watermark_cover_only)

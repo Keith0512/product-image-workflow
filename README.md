@@ -18,6 +18,23 @@ skills/shopee-image-batch
 
 完成後開新對話；若找不到技能，重新開啟 Codex。
 
+## 更新已安裝的技能
+
+已安裝過的電腦，可在本機執行的 Codex 貼上：
+
+```text
+請使用 $skill-installer，將 GitHub Keith0512/product-image-workflow 的 main 最新版更新到本機這三個技能：
+skills/product-image-workflow
+skills/product-cover
+skills/shopee-image-batch
+這次已授權更新既有同名技能：先下載到暫存目錄，比較差異，將舊版完整備份到技能掃描範圍以外，再以 main 版本更新；未安裝的就直接安裝。
+不要因同名目錄存在就停止，也不要改動其他技能、Codex 設定或商品素材。
+完成後檢查三個 SKILL.md、參考文件與腳本可讀，確認已包含「分割前視覺驗收」、check-visual 與 M 切片前阻擋檢查。
+回報來源 commit、安裝位置、備份位置與驗證結果；這次只更新技能，不處理商品。
+```
+
+更新後下一輪即可使用；若仍看不到更新，重新開啟 Codex。GitHub `main` 更新不會自動替換其他電腦的本機技能，需各自執行更新。[技能安裝與變更偵測說明](https://learn.chatgpt.com/docs/build-skills)
+
 ## 每次使用
 
 將下面的來源路徑換成你的資料夾，整段貼到 Codex：
@@ -31,6 +48,8 @@ skills/shopee-image-batch
 ```
 
 資料夾名稱不用完全一致；沒有選項圖或規格圖，就直接告訴 AI。
+
+主圖與詳情整理好後，AI 必須先逐張檢查字體大小、排版，以及不該有的陰影、鬼影、殘影；有問題先修正並重新檢查。全部通過後才製作 S／M 詳情切片，改圖後需重新驗收；紀錄與修正前後對照會放進處理報告。這是 AI 的必要檢查，不需要你每張例行確認。
 
 預設將所有成品、草稿、中間檔及報告存入 `D:\商品素材\商品A\輸出\YYYYMMDD-v01\`；日期採使用者時區，同日再次製作使用 v02、v03，保留原圖與歷史版本。需要另存時，再指定輸出位置。
 

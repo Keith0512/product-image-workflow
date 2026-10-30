@@ -28,7 +28,13 @@ class OutputLocationTests(unittest.TestCase):
             "explicit_source": str(self.source),
             "source_reviewed": True,
             "review_evidence": "Synthetic solid-white fixture, no seams or SKU variants",
-            "sources": [{"path": str(self.original), "sha256": self.original_hash}],
+            "sources": [{"path": str(self.original), "sha256": self.original_hash,
+                         "visual_review": {
+                             "sha256": self.original_hash, "status": "PASS",
+                             "typography": "PASS", "text_cleanup": "PASS",
+                             "background": "PASS", "product_integrity": "PASS",
+                             "evidence": "Synthetic solid-white fixture; no text, repair regions or product",
+                         }}],
         }), encoding="utf-8")
 
     def test_scan_excludes_output_tree_without_report(self):
