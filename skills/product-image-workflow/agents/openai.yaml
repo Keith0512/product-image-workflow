@@ -1,4 +1,4 @@
 interface:
   display_name: "商品繁中"
-  short_description: "一個入口整理商品素材、製作封面與詳情頁，先提問選稿再交付圖片與報告"
-  default_prompt: "請使用 $product-image-workflow，從我提供的商品素材目錄開始，先盤點並提問，再製作封面與整套商品圖片。"
+  short_description: "先盤點提問，再直接交付高資訊量與 MOMO 專用兩版封面、商品圖片及報告"
+  default_prompt: "請使用 $product-image-workflow，從我提供的商品素材目錄開始，先盤點並集中提問，再直接交付高資訊量與 MOMO 專用兩版封面及整套商品圖片。"

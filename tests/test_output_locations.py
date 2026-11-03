@@ -44,6 +44,13 @@ class OutputLocationTests(unittest.TestCase):
         paths = [row["relative_path"] for row in inventory(self.source)["images"]]
         self.assertEqual(paths, [self.original.name])
 
+    def test_scan_excludes_momo_delivery_without_report(self):
+        cover = self.source / "8_MOMO專用" / "主圖_01.jpg"
+        cover.parent.mkdir()
+        Image.new("RGB", (1000, 1000), "white").save(cover)
+        paths = [row["relative_path"] for row in inventory(self.source)["images"]]
+        self.assertEqual(paths, [self.original.name])
+
     def test_resolve_m_ignores_generated_output(self):
         draft = self.source / "輸出" / "20261025-v01" / "draft.jpg"
         draft.parent.mkdir(parents=True)

@@ -17,7 +17,7 @@ OUTPUTS = {
 }
 WATERMARK_OUTPUT = "7_浮水印主圖"
 EXCLUDED = set(OUTPUTS) | {"輸出", "0_處理紀錄", "6_待人工審核", "M版來源",
-                           "浮水印", "浮水印素材", WATERMARK_OUTPUT}
+                           "浮水印", "浮水印素材", WATERMARK_OUTPUT, "8_MOMO專用"}
 ALIASES = {
     "主圖": "main", "主图": "main", "main": "main",
     "選項圖": "option", "选项图": "option", "sku": "option",
