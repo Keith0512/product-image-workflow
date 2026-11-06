@@ -24,6 +24,7 @@ class OutputLocationTests(unittest.TestCase):
         self.original_hash = sha256(self.original)
         self.plan = self.root / "plan.json"
         self.plan.write_text(json.dumps({
+            "mode": "fixed-1500",
             "result_root": str(self.source),
             "explicit_source": str(self.source),
             "source_reviewed": True,

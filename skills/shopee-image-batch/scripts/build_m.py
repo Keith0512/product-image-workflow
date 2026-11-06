@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build fixed-height M slices from an agent-reviewed, hash-bound source plan."""
+"""Export reviewed MOMO editorial pages or explicitly requested fixed-1500 slices."""
 import argparse
 import csv
 import io
@@ -36,20 +36,31 @@ def rgb_normalized(path, background=None):
 
 def encode(image):
     # Enforce a quality floor; oversized images remain complete and REVIEW.
+    optimize = True
     for quality in (95, 93, 91, 89, 87, 85, 83, 82):
         buffer = io.BytesIO()
-        image.save(buffer, "JPEG", quality=quality, optimize=True, subsampling=0)
+        try:
+            image.save(buffer, "JPEG", quality=quality, optimize=optimize, subsampling=0)
+        except OSError:
+            if not optimize:
+                raise
+            # Some libjpeg builds underestimate the optimized buffer for highly
+            # textured RGB pages. Preserve quality/4:4:4; let the byte cap route
+            # the larger, valid JPEG to review instead of losing the whole set.
+            optimize = False
+            buffer = io.BytesIO()
+            image.save(buffer, "JPEG", quality=quality, optimize=False, subsampling=0)
         data = buffer.getvalue()
         if len(data) <= 480000:
             return data, quality
     return data, quality
 
 
-def build(plan_path, output):
+def build_fixed(plan_path, output):
     plan_path = Path(plan_path).resolve(strict=True)
     plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
-    if plan.get("mode", "fixed-1500") != "fixed-1500":
-        raise ValueError("工具僅支援fixed-1500")
+    if plan.get("mode") != "fixed-1500":
+        raise ValueError("完整固定切片須明確指定fixed-1500")
     if plan.get("source_reviewed") is not True or not plan.get("review_evidence"):
         raise ValueError("必須先完成來源、SKU與接縫檢視並提供實際證據")
     base = Path(plan["result_root"])
@@ -159,6 +170,15 @@ def build(plan_path, output):
         raise AssertionError("M切片數量不符")
     if expected > 20:
         pending.append(f"M超過20張：{expected}")
+    # Keep one JPEG set. Review-only output never also appears in the upload folder.
+    if expected > 20 or any("容量超限" in reason for reason in pending):
+        relative = ("6_待人工審核/超限完整稿/完整固定切片" if expected > 20
+                    else "6_待人工審核/M容量異常")
+        review_destination = output / relative
+        review_destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.rename(review_destination)
+        for sl in slices:
+            sl["path"] = f"{relative}/{Path(sl['path']).name}"
     manifest = {
         "status": "REVIEW", "mode": "fixed-1500",
         "source_mode": selected["source_mode"], "source_root": selected["source_root"],
@@ -204,6 +224,17 @@ def build(plan_path, output):
                     "change_type": "規格化及固定切片；原圖映射見M切片紀錄",
                     "evidence_path": "0_處理紀錄/M計畫.json", "status": "REVIEW"})
     return manifest
+
+
+def build(plan_path, output):
+    plan = json.loads(Path(plan_path).read_text(encoding="utf-8-sig"))
+    mode = plan.get("mode", "momo-editorial")
+    if mode == "momo-editorial":
+        from momo_editorial import build_editorial
+        return build_editorial(plan, output, encode)
+    if mode == "fixed-1500":
+        return build_fixed(plan_path, output)
+    raise ValueError("M模式須為momo-editorial或明確指定的fixed-1500")
 
 
 def main():

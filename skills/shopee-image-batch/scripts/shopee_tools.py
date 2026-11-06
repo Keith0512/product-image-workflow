@@ -31,6 +31,17 @@ def natural_key(value):
             for t in re.split(r"(\d+)", str(value))]
 
 
+def image_file(path):
+    """Exclude confirmed AppleDouble metadata, not damaged or oddly named images."""
+    if not path.is_file() or path.suffix.lower() not in EXTENSIONS:
+        return False
+    if path.name.startswith("._"):
+        with path.open("rb") as f:
+            if f.read(4) == b"\x00\x05\x16\x07":
+                return False
+    return True
+
+
 def sha256(path):
     h = hashlib.sha256()
     with Path(path).open("rb") as f:
@@ -89,8 +100,7 @@ def validate_visual_reviews(rows, source_dirs=()):
             directory = Path(source_dir).resolve(strict=True)
             if not directory.is_dir():
                 raise ValueError("視覺驗收範圍須為圖片資料夾")
-            expected.update(p.resolve() for p in directory.iterdir()
-                            if p.is_file() and p.suffix.lower() in EXTENSIONS)
+            expected.update(p.resolve() for p in directory.iterdir() if image_file(p))
         if paths != expected:
             raise ValueError("視覺驗收清單未完整對應指定資料夾，不能漏檢或混入其他圖片")
     return checked
@@ -103,7 +113,7 @@ def inventory(root, excludes=()):
     excluded_paths = [Path(p).resolve() for p in excludes]
     images, skipped = [], []
     for path in sorted(root.rglob("*"), key=lambda p: natural_key(p.relative_to(root))):
-        if not path.is_file() or path.suffix.lower() not in EXTENSIONS:
+        if not image_file(path):
             continue
         rel = path.relative_to(root)
         resolved = path.resolve()
@@ -153,13 +163,12 @@ def resolve_m(result_root, explicit=None):
         raise ValueError("M來源存在但不是資料夾；不得回退")
     if any(p in {"4_S詳情頁", "5_M詳情頁"} for p in source.parts):
         raise ValueError("禁止S或舊M作為M來源")
-    paths = sorted([p for p in source.iterdir()
-                    if p.is_file() and p.suffix.lower() in EXTENSIONS],
+    paths = sorted([p for p in source.iterdir() if image_file(p)],
                    key=lambda p: natural_key(p.name))
     if not paths:
         raise ValueError("選定M來源沒有有效圖片；不得回退")
-    nested = [p for p in source.rglob("*") if p.is_file()
-              and p.parent != source and p.suffix.lower() in EXTENSIONS
+    nested = [p for p in source.rglob("*") if image_file(p)
+              and p.parent != source
               and p.relative_to(source).parts[0] != "輸出"]
     if nested:
         raise ValueError("M來源含子目錄圖片，須先確認歸屬與順序")
@@ -177,18 +186,90 @@ def resolve_m(result_root, explicit=None):
             "pending": ["逐接縫、文字、商品及SKU檢視"]}
 
 
+def m_record_audit(root):
+    """Check editorial exports against their records without inferring semantic PASS."""
+    record_path = root / "0_處理紀錄/M切片紀錄.json"
+    plan_path = root / "0_處理紀錄/M計畫.json"
+    issues, mode, review_only = [], "momo-editorial", False
+    try:
+        if plan_path.is_file():
+            plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+            mode = plan.get("mode", "momo-editorial")
+        else:
+            plan = None
+        if not record_path.is_file():
+            if plan is not None:
+                raise ValueError("M計畫存在但M切片紀錄缺失")
+            return mode, review_only, issues
+        record = json.loads(record_path.read_text(encoding="utf-8-sig"))
+        if plan is not None and record.get("mode") != mode:
+            raise ValueError("M計畫與成品紀錄模式不符")
+        mode = record.get("mode")
+        if mode not in {"momo-editorial", "fixed-1500"}:
+            raise ValueError("M成品紀錄模式不符")
+        rows = record.get("pages" if mode == "momo-editorial" else "slices", [])
+        if not isinstance(rows, list) or not rows:
+            raise ValueError("M成品紀錄沒有頁面")
+        declared = set()
+        for row in rows:
+            path = Path(row.get("path", ""))
+            if path.is_absolute() or ".." in path.parts or path in declared:
+                raise ValueError("M頁面路徑不符或重複")
+            if not path.parts or path.parts[0] not in {"5_M詳情頁", "6_待人工審核"}:
+                raise ValueError("M頁面必須在正式或待審資料夾")
+            actual = root / path
+            if not actual.is_file() or sha256(actual) != row.get("sha256"):
+                raise ValueError("M成品缺失或已改圖，須重新驗收")
+            declared.add(path)
+        if record.get("actual_count") != len(rows) or record.get("expected_count") != len(rows):
+            raise ValueError("M紀錄頁數與實際清單不符")
+        formal = {p.relative_to(root) for p in (root / "5_M詳情頁").iterdir() if image_file(p)} \
+            if (root / "5_M詳情頁").is_dir() else set()
+        if formal != {p for p in declared if p.parts[0] == "5_M詳情頁"}:
+            raise ValueError("正式M資料夾與M成品紀錄清單不符")
+        review_only = all(p.parts[0] == "6_待人工審核" for p in declared)
+        if review_only:
+            issues.append({"status": "REVIEW", "reason": "M僅有完整待審稿，尚無符合限制的正式候選"})
+        if mode == "momo-editorial":
+            if not 1 <= len(rows) <= 20:
+                raise ValueError("MOMO編輯版頁數超限")
+            review = record.get("content_review", {})
+            if review.get("status") != "PASS" or not str(review.get("evidence", "")).strip():
+                raise ValueError("M必要資訊內容核對紀錄缺失")
+            for name in ["M計畫.json", "M必要資訊覆蓋.csv", "M內容取捨.csv"]:
+                path = root / "0_處理紀錄" / name
+                if not path.is_file() or sha256(path) != record.get("record_hashes", {}).get(name):
+                    raise ValueError(f"M追溯紀錄缺失或已變更：{name}")
+        formal_hashes = {sha256(root / p) for p in formal}
+        review_dir = root / "6_待人工審核"
+        duplicates = [str(p.relative_to(root)) for p in review_dir.rglob("*")
+                      if image_file(p) and sha256(p) in formal_hashes] if review_dir.is_dir() else []
+        if duplicates:
+            issues.append({"status": "REVIEW", "reason": "第5與第6資料夾有內容相同的M副本，應改用引用",
+                           "paths": duplicates})
+    except Exception as e:
+        issues.append({"status": "FAIL", "reason": str(e)})
+    return mode, review_only, issues
+
+
 def audit(root, mode="full", na=(), sku_count=None, watermark_sets=(),
-          watermark_cover_only=False):
+          watermark_cover_only=False, include_m=False):
     root = Path(root).resolve(strict=True)
     rows, issues = [], []
-    names = ["5_M詳情頁"] if mode == "m" else ["1_主圖"] if mode == "main" else list(OUTPUTS)
+    m_mode, m_review_only = "momo-editorial", False
+    with_m = mode == "m" or (mode == "full" and include_m)
+    if with_m and "5_M詳情頁" not in na:
+        m_mode, m_review_only, m_issues = m_record_audit(root)
+        issues.extend(m_issues)
+    names = ["5_M詳情頁"] if mode == "m" else ["1_主圖"] if mode == "main" else [
+        name for name in OUTPUTS if name != "5_M詳情頁" or with_m]
     targets = [(name, name) for name in names]
     main_files = set()
     if mode != "m":
         main_root = root / "1_主圖"
         if main_root.is_dir():
             main_files = {p.name for p in main_root.iterdir()
-                          if p.is_file() and p.suffix.lower() in EXTENSIONS
+                          if image_file(p)
                           and (not watermark_cover_only or p.stem == "主圖_01")}
         watermark_root = root / WATERMARK_OUTPUT
         sets = set(watermark_sets)
@@ -203,10 +284,10 @@ def audit(root, mode="full", na=(), sku_count=None, watermark_sets=(),
             issues.append({"status": "REVIEW", "reason": f"{name}標N/A，需確認使用者依據"})
             continue
         directory = root / relative
-        files = sorted([p for p in directory.iterdir() if p.is_file()
-                        and p.suffix.lower() in EXTENSIONS], key=lambda p: natural_key(p.name)) if directory.is_dir() else []
+        files = sorted([p for p in directory.iterdir() if image_file(p)],
+                       key=lambda p: natural_key(p.name)) if directory.is_dir() else []
         prefix, limit, cap = OUTPUTS[name]
-        if not files:
+        if not files and not (name == "5_M詳情頁" and m_review_only):
             issues.append({"status": "FAIL", "reason": f"{relative}必要輸出缺失"})
         if limit and len(files) > limit:
             issues.append({"status": "REVIEW", "reason": f"{relative}超限：{len(files)}>{limit}"})
@@ -233,10 +314,12 @@ def audit(root, mode="full", na=(), sku_count=None, watermark_sets=(),
                     row["issues"].append("EXIF方向未規格化")
                 if name in {"1_主圖", "2_選項圖"} and h != 1000:
                     row["issues"].append("高度不符1000")
-                if name == "4_S詳情頁" and not 500 <= h <= 32000:
-                    row["issues"].append("S高度不符")
-                if name == "5_M詳情頁" and not (h == 1500 if i < len(files) else 1 <= h <= 1500):
-                    row["issues"].append("M固定高度或末張高度不符")
+                if name == "4_S詳情頁" and not 0.5 <= w / h <= 32:
+                    row["issues"].append("S寬高比不符：寬÷高須介於0.5～32（含邊界）")
+                if name == "5_M詳情頁":
+                    height_ok = h == 1500 if m_mode == "momo-editorial" or i < len(files) else 1 <= h <= 1500
+                    if not height_ok:
+                        row["issues"].append("M編輯頁高度須1500；完整固定切片僅末張可較短")
                 if cap and row["bytes"] > cap:
                     row["issues"].append("容量超限")
                 match = re.fullmatch(re.escape(prefix) + r"_(\d{2,})\.(jpg|png)", path.name)
@@ -278,6 +361,7 @@ def main():
     p = sub.add_parser("audit")
     p.add_argument("root")
     p.add_argument("--mode", choices=["full", "m", "main"], default="full")
+    p.add_argument("--include-m", action="store_true", help="完整稽核另納入明確要求的M詳情")
     p.add_argument("--na", action="append", choices=list(OUTPUTS), default=[])
     p.add_argument("--sku-count", type=int)
     p.add_argument("--watermark-set", action="append", default=[])
@@ -297,7 +381,7 @@ def main():
                       "note": "僅核對逐張PASS紀錄、範圍與雜湊；實際視覺驗收由檢視圖片的代理負責。"}
         else:
             result = audit(args.root, args.mode, args.na, args.sku_count,
-                           args.watermark_set, args.watermark_cover_only)
+                           args.watermark_set, args.watermark_cover_only, args.include_m)
         if args.out:
             save_json_new(args.out, result)
         print(json.dumps(result, ensure_ascii=False, indent=2))

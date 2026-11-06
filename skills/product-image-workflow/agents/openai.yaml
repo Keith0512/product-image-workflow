@@ -1,4 +1,4 @@
 interface:
   display_name: "商品繁中"
-  short_description: "先盤點提問，再直接交付高資訊量與 MOMO 專用兩版封面、商品圖片及報告"
-  default_prompt: "請使用 $product-image-workflow，從我提供的商品素材目錄開始，先盤點並集中提問，再直接交付高資訊量與 MOMO 專用兩版封面及整套商品圖片。"
+  short_description: "高資訊量封面、完整繁中商品圖、蝦皮S詳情與稽核，MOMO按需製作"
+  default_prompt: "請使用 $product-image-workflow 處理我提供的商品素材，集中盤點問答後直接交付高資訊量封面、完整繁中與最多12張的蝦皮S詳情，附來源及驗收報告；預設不製作M詳情或MOMO封面。"

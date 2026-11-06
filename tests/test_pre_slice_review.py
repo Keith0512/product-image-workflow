@@ -32,6 +32,7 @@ class PreSliceReviewTests(unittest.TestCase):
             },
         }
         self.plan = {
+            "mode": "fixed-1500",
             "result_root": str(self.source), "explicit_source": str(self.source),
             "source_reviewed": True, "review_evidence": "Synthetic fixture without adjacent seams",
             "sources": [self.row],
