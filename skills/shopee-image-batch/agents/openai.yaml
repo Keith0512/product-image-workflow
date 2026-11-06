@@ -1,4 +1,4 @@
 interface:
   display_name: "商品圖批次處理"
-  short_description: "接縫還原、完整繁中、最多12張蝦皮S詳情及品質稽核，M詳情按需製作"
-  default_prompt: "請使用 $shopee-image-batch 處理我授權的商品資料夾，保留原圖與完整3版，製作寬高比0.5～32、最多12張的蝦皮S版及離線HTML報告；預設不製作M詳情或MOMO封面。"
+  short_description: "原風格繁中或按需重設計，保留完整詳情並交付最多12張蝦皮S版與稽核"
+  default_prompt: "請使用 $shopee-image-batch 處理我授權的商品資料夾，預設原風格繁中，明確要求時才重設計；保留原圖與完整3版，製作寬÷高0.5～32、最多12張的蝦皮S版及離線報告，M詳情按需製作，不自動新增MOMO封面。"
