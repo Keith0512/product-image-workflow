@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>主圖／詳情頁差異預覽</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f5f3ed;
+      --surface: #ffffff;
+      --ink: #263c32;
+      --secondary: #526258;
+      --line: #cbd3c6;
+      --canvas: #e8ece4;
+      --active: #263c32;
+      --error: #8b3029;
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--paper); }
+    button, select { font: inherit; color: inherit; }
+    button, select, a { -webkit-tap-highlight-color: transparent; }
+    button, select { min-height: 36px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+    button { padding: 6px 13px; cursor: pointer; }
+    button:hover { background: #e3e8dd; }
+    button[aria-pressed="true"] { background: var(--active); color: #fff; border-color: var(--active); }
+    button:disabled { cursor: default; opacity: .55; }
+    select { padding: 5px 8px; min-width: 0; width: 100%; }
+    :focus-visible { outline: 3px solid #a56739; outline-offset: 2px; }
+    ::selection { color: #fff; background: #476950; }
+    a { color: var(--ink); text-underline-offset: 3px; }
+    a:hover { color: #805031; }
+    .app { height: 100vh; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+    .page-header { padding: 18px 22px 14px; border-bottom: 1px solid var(--line); }
+    h1 { margin: 0; font-size: 21px; line-height: 1.35; font-weight: 700; }
+    .product { margin: 4px 0 12px; color: var(--secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .navigation { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; }
+    .categories { display: flex; flex-wrap: wrap; gap: 6px; }
+    .hint { margin: 0; color: var(--secondary); font-size: 13px; }
+    .comparison { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
+    .pane { min-height: 0; min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--paper); }
+    .pane-header { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    .pane-heading { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+    h2 { margin: 0; font-size: 17px; }
+    .count { color: var(--secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
+    .toolbar { display: flex; align-items: end; gap: 10px; }
+    .jump { flex: 1; min-width: 0; }
+    .control-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--secondary); }
+    .zoom { display: flex; flex: none; gap: 4px; }
+    .image-scroll { min-height: 0; min-width: 0; overflow: auto; position: relative; background: var(--canvas); overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-color: #8c9d8b var(--canvas); }
+    figure { margin: 0 0 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+    figcaption { padding: 10px 14px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 3px 12px; border-bottom: 1px solid #e4e8df; font-size: 12px; }
+    figcaption a { overflow-wrap: anywhere; }
+    .dimensions { color: var(--secondary); font-variant-numeric: tabular-nums; }
+    img { display: block; width: 100%; height: auto; max-width: none; background: var(--surface); }
+    .natural figure { width: max-content; min-width: 100%; }
+    img[hidden] { display: none; }
+    .natural img { width: var(--image-width); }
+    .image-error { padding: 24px 16px; color: var(--error); max-width: 65ch; }
+    .load-state { color: var(--secondary); }
+    noscript { display: block; padding: 20px; }
+    @media (max-width: 720px) {
+      .page-header { padding: 12px; }
+      h1 { font-size: 18px; }
+      .product { font-size: 12px; margin-bottom: 8px; }
+      .hint { font-size: 12px; }
+      .pane-header { padding: 10px 8px; }
+      .pane-heading { gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+      h2 { font-size: 15px; }
+      .toolbar { flex-wrap: wrap; gap: 7px; }
+      .jump { flex-basis: 100%; }
+      button, select { min-height: 40px; }
+      .zoom button { padding: 5px 10px; }
+      figcaption { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="page-header">
+      <h1>主圖／詳情頁差異預覽</h1>
+      <p class="product" id="product"></p>
+      <div class="navigation">
+        <nav class="categories" aria-label="圖片分類" id="categories"></nav>
+        <p class="hint">兩欄可分別上下捲動；張數與排版依各版本保留。</p>
+      </div>
+    </header>
+    <main class="comparison" aria-label="原始檔與重製版本比較">
+      <section class="pane" aria-labelledby="original-heading" data-side="original">
+        <header class="pane-header">
+          <div class="pane-heading"><h2 id="original-heading">原始檔</h2><span class="count"></span></div>
+          <div class="toolbar">
+            <label class="jump"><span class="control-label">跳至原始圖片</span><select aria-label="跳至原始圖片"></select></label>
+            <div class="zoom" role="group" aria-label="原始檔縮放">
+              <button type="button" data-zoom="fit" aria-pressed="true">適寬</button>
+              <button type="button" data-zoom="natural" aria-pressed="false">100%</button>
+            </div>
+          </div>
+        </header>
+        <div class="image-scroll" tabindex="0" role="region" aria-label="原始檔獨立捲動區"></div>
+      </section>
+      <section class="pane" aria-labelledby="remade-heading" data-side="remade">
+        <header class="pane-header">
+          <div class="pane-heading"><h2 id="remade-heading">重製版本</h2><span class="count"></span></div>
+          <div class="toolbar">
+            <label class="jump"><span class="control-label">跳至重製圖片</span><select aria-label="跳至重製圖片"></select></label>
+            <div class="zoom" role="group" aria-label="重製版本縮放">
+              <button type="button" data-zoom="fit" aria-pressed="true">適寬</button>
+              <button type="button" data-zoom="natural" aria-pressed="false">100%</button>
+            </div>
+          </div>
+        </header>
+        <div class="image-scroll" tabindex="0" role="region" aria-label="重製版本獨立捲動區"></div>
+      </section>
+    </main>
+  </div>
+  <noscript>請使用可執行JavaScript的瀏覽器開啟此離線比較頁，並保留同層的「0_處理紀錄」素材資料夾。</noscript>
+  <script type="application/json" id="comparison-data">__COMPARISON_DATA__</script>
+  <script>
+    "use strict";
+    const data = JSON.parse(document.getElementById("comparison-data").textContent);
+    document.title = data.title + "｜主圖詳情頁差異預覽";
+    const product = document.getElementById("product");
+    product.textContent = data.title;
+    product.title = data.title;
+    const panes = Array.from(document.querySelectorAll(".pane"));
+    const positions = new Map();
+    let active = null;
+
+    function visibleIndex(scroller) {
+      const figures = Array.from(scroller.children);
+      let index = 0;
+      for (let i = 0; i < figures.length; i++) {
+        if (figures[i].offsetTop <= scroller.scrollTop + 8) index = i;
+        else break;
+      }
+      return index;
+    }
+
+    function renderPane(pane, group) {
+      const side = pane.dataset.side;
+      const items = group[side];
+      const scroller = pane.querySelector(".image-scroll");
+      const select = pane.querySelector("select");
+      pane.querySelector(".count").textContent = items.length + "張";
+      select.replaceChildren();
+      scroller.replaceChildren();
+      items.forEach((item, index) => {
+        const option = new Option(String(index + 1).padStart(2, "0") + " · " + item.name, String(index));
+        select.add(option);
+        const figure = document.createElement("figure");
+        const caption = document.createElement("figcaption");
+        const link = document.createElement("a");
+        link.textContent = item.name;
+        link.href = item.src;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.title = "開啟原尺寸圖片；SHA-256：" + item.sha256;
+        const dimensions = document.createElement("span");
+        dimensions.className = "dimensions";
+        dimensions.textContent = item.width + " × " + item.height;
+        const state = document.createElement("span");
+        state.className = "load-state";
+        state.textContent = "載入中";
+        caption.append(link, dimensions, state);
+        const image = document.createElement("img");
+        image.alt = (side === "original" ? "原始檔：" : "重製版本：") + item.name;
+        image.width = item.width;
+        image.height = item.height;
+        image.style.setProperty("--image-width", item.width + "px");
+        image.loading = index < 2 ? "eager" : "lazy";
+        image.addEventListener("load", () => state.remove());
+        image.addEventListener("error", () => {
+          state.textContent = "載入失敗";
+          image.hidden = true;
+          const error = document.createElement("p");
+          error.className = "image-error";
+          error.textContent = "圖片未載入。請確認此HTML與「0_處理紀錄／差異預覽素材」仍放在同一份成果資料夾。";
+          figure.append(error);
+        });
+        image.src = item.src;
+        figure.append(caption, image);
+        scroller.append(figure);
+      });
+      const saved = positions.get(group.id + "/" + side) || {top: 0, left: 0, natural: false};
+      scroller.classList.toggle("natural", saved.natural);
+      pane.querySelectorAll("[data-zoom]").forEach(button => {
+        button.setAttribute("aria-pressed", String((button.dataset.zoom === "natural") === saved.natural));
+      });
+      scroller.scrollTop = saved.top;
+      scroller.scrollLeft = saved.left;
+      select.value = String(visibleIndex(scroller));
+    }
+
+    function selectGroup(group) {
+      if (active) panes.forEach(pane => {
+        const scroller = pane.querySelector(".image-scroll");
+        positions.set(active.id + "/" + pane.dataset.side, {
+          top: scroller.scrollTop, left: scroller.scrollLeft, natural: scroller.classList.contains("natural")
+        });
+      });
+      active = group;
+      panes.forEach(pane => renderPane(pane, group));
+      document.querySelectorAll("[data-category]").forEach(button => {
+        button.setAttribute("aria-pressed", String(button.dataset.category === group.id));
+      });
+    }
+
+    data.groups.forEach(group => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.category = group.id;
+      button.textContent = group.label;
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => selectGroup(group));
+      document.getElementById("categories").append(button);
+    });
+
+    panes.forEach(pane => {
+      const scroller = pane.querySelector(".image-scroll");
+      const select = pane.querySelector("select");
+      select.addEventListener("change", () => {
+        const figure = scroller.children[Number(select.value)];
+        scroller.scrollTop = figure.offsetTop;
+      });
+      let scheduled = false;
+      scroller.addEventListener("scroll", () => {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => {
+          select.value = String(visibleIndex(scroller));
+          scheduled = false;
+        });
+      }, {passive: true});
+      pane.querySelectorAll("[data-zoom]").forEach(button => button.addEventListener("click", () => {
+        const figure = scroller.children[visibleIndex(scroller)];
+        const progress = (scroller.scrollTop - figure.offsetTop) / figure.offsetHeight;
+        scroller.classList.toggle("natural", button.dataset.zoom === "natural");
+        pane.querySelectorAll("[data-zoom]").forEach(other => {
+          other.setAttribute("aria-pressed", String(other === button));
+        });
+        scroller.scrollTop = figure.offsetTop + progress * figure.offsetHeight;
+        scroller.scrollLeft = 0;
+      }));
+    });
+    selectGroup(data.groups[0]);
+  </script>
+</body>
+</html>

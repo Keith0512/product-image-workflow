@@ -1,4 +1,4 @@
 interface:
   display_name: "商品繁中"
-  short_description: "原風格繁中或按需重設計，適用戶外、旅遊與潮流3C，含封面、完整詳情及蝦皮S版"
-  default_prompt: "請使用 $product-image-workflow 處理我提供的商品素材，預設原風格繁中，只有我明確要求時才採繁中重設計；集中問答後直接交付高資訊量封面、完整詳情、最多12張蝦皮S版及驗收報告，M詳情與MOMO封面按需製作。"
+  short_description: "原風格繁中或按需重設計，含封面、完整詳情、蝦皮S版及原稿重製稿左右差異預覽"
+  default_prompt: "請使用 $product-image-workflow 處理我提供的商品素材，預設原風格繁中，只有我明確要求時才採繁中重設計；集中問答後直接交付高資訊量封面、完整詳情、最多12張蝦皮S版、可獨立捲動的原稿與重製稿左右差異預覽及驗收報告，M詳情與MOMO封面按需製作。"
