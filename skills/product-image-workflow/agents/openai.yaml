@@ -1,4 +1,4 @@
 interface:
   display_name: "商品繁中"
-  short_description: "原風格只換字，按需繁中重設計，交付主圖、完整詳情、蝦皮S版及左右差異預覽"
-  default_prompt: "請使用 $product-image-workflow 處理我的商品素材，預設只換成台灣繁中文字並保留版面，將每個商品的差異預覽集中在本次版本目錄，頁內可勾選版本比對並自動帶入已驗收的上一套成果。"
+  short_description: "原風格繁中與非方形主圖轉製，按需重設計，交付完整詳情、蝦皮S版及左右差異預覽"
+  default_prompt: "請使用 $product-image-workflow 處理我的商品素材，預設在原版面換成台灣繁中。非方形的封面、主圖、選項圖依原圖設計轉製成方形，並將各商品的差異預覽集中在本次版本目錄。"

@@ -52,7 +52,7 @@ text_id, product, source_ids, source_boxes, original_text, zh_tw_text, confidenc
 圖片來源對應.csv：
 output_path, output_sha256, source_id, source_sha256, source_box, normalized_box, output_box, scale_x, scale_y, overlap_removed_px, change_type, evidence_path, status
 
-change_type區分原始保留／去重／去字／補景／文字重排／裁切／縮放。AI與新排文字屬衍生像素，記原區域和操作，不謊稱原始像素。無法得知原文／信心／審核者時不捏造。
+change_type區分原始保留／去重／去字／補景／文字重排／裁切／縮放／原風格方形轉製。方形轉製列原圖與成品比例、參考圖、實際調整及商品和版面對照的證據。生成結果及新排文字屬衍生像素，只記實際可追溯的區域及變換。無法得知原文／信心／審核者時不捏造。
 
 繁中重設計另區分原照重構圖／去背／背景生成或替換／原商品區域合成／參考圖編輯，記實際商品參考、採用區域、生成範圍與商品細節核對。參考圖編輯屬衍生畫面，沒有逐像素映射就不虛填變換矩陣或宣稱保留原像素；遮罩及變換只記實際使用的內容。`0_處理紀錄/重設計內容對照.csv`依[共用重設計規則](../../product-image-workflow/references/redesign.md)連結每項實質資訊、整併承接及成品位置；不能用保存原圖代替成品內容完整性。
 
