@@ -1,4 +1,4 @@
 interface:
   display_name: "商品封面"
-  short_description: "依商品素材製作繁中封面，沿用原流程或按需重設計，MOMO版按需製作"
-  default_prompt: "請使用 $product-cover 讀取我提供的素材並釐清賣點，沿用原有封面流程；只有我明確要求繁中重設計時才改用共用視覺摘要，MOMO封面按需製作。"
+  short_description: "製作台灣繁中商品封面，原風格只換文字，支援封面選稿、重設計與MOMO專用版"
+  default_prompt: "請使用 $product-cover 處理我的商品封面，指定原風格時只換原圖文字，需要設計新封面時依本次指定模式處理。"
